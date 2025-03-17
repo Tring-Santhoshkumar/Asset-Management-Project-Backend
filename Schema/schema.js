@@ -17,10 +17,16 @@ export const typeDefs = `#graphql
   	    state: String,
   	    pin_code: String,
   	    country: String,
+        status: String,
+        created_at: String,
+        updated_at: String,
+        deleted_at: String,
+        reset_password: String,
         assigned_assets: [Asset]
     },
     type Asset{
         id: ID!,
+        serial_no: String,
         type: String,
         name: String,
         version: String,
@@ -29,20 +35,41 @@ export const typeDefs = `#graphql
         assigned_to: ID,
         assigned_status: String,
         assigned_date: String,
-        return_date: String
+        return_date: String,
+        created_at: String,
+        updated_at: String,
+        deleted_at: String,
+    },
+    type Notifications{
+        id: ID!,
+        user_id: ID,
+        asset_id: ID,
+        message: String,
+        is_read: Boolean,
+        created_at: String
     },
     type Query{
         users : [user],
         user(id: ID!) : user,
         allAssets : [Asset],
         asset(id: ID!): Asset,
+        assetByUserId(assigned_to: ID!): [Asset],
+        getNotifications: [Notifications],
+        getNotificationsById(user_id: ID!): [Notifications]
     },
     type Mutation{
         register(name: String!, email: String!, password: String!, role: String!): user,
         login(email: String!, password: String!): String,
+        changePassword(id: ID!, password: String!): String,
         updateUser(id: ID!,name: String!,email: String!,profile_pic: String,dob: String!, gender: String!, blood_group: String!, marital_status: String!,
             phone: String!, address: String!, designation: String!, department: String!, city: String!,state: String!,pin_code: String!,country: String!) : user,
         assignAsset(id: ID!, assigned_to: ID!): Asset,
-        addAsset(type: String!, serial_no: String!, name: String!, version: String!, specifications: String!, condition: String!, assigned_to: ID , assigned_status: String!, assigned_date: String, return_date: String) : String
+        requestAsset(id: ID!): String,
+        addAsset(type: String!, serial_no: String!, name: String!, version: String!, specifications: String!, condition: String!, assigned_to: ID , assigned_status: String!, assigned_date: String, return_date: String) : String,
+        addUser(name: String!,email: String!,role: String!): String,
+        deleteUser(id: ID!): String,
+        deAssignAsset(id: ID!): String,
+        createNotification(user_id: ID!, asset_id: ID!, message: String!): Notifications,
+        readNotifications(id: ID!,choice: Boolean!): String
     }
 `

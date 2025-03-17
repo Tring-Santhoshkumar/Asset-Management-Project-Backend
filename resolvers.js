@@ -1,17 +1,25 @@
 import bcrypt from 'bcryptjs';
 import db from './db.js';
 import jwt from 'jsonwebtoken';
-import { sendEmail } from './mailer.js';
+import { sendEmail } from './Service/Mail/mailer.js';
 export const resolvers = {
   Query: {
     users: async () => {
       const result = await db.query("SELECT * FROM users");
-      return result.rows;
+      const users = result.rows;
+      // for (const user of users) {
+      //   const assetsResult = await pool.query("SELECT * FROM assets WHERE assigned_to = $1", [user.id]);
+      //   user.assigned_assets = assetsResult.rows;
+      // }
+      return users;
     },
     user: async (_req, args) => {
       const result = await db.query(`SELECT * FROM users WHERE id = '${args.id}'`);
       // console.log("User Data : ", result.rows[0]);
-      return { ...result.rows[0], dob: result.rows[0].dob ? result.rows[0].dob.toISOString().split("T")[0] : null };
+      // const users = result.rows[0];
+      // const assetsResult = await pool.query("SELECT * FROM assets WHERE assigned_to = $1", [users.id]);
+      // users.assigned_assets = assetsResult.rows;
+      return { ...result?.rows[0], dob: result.rows[0].dob ? result.rows[0].dob.toISOString().split("T")[0] : null };
     },
     allAssets: async () => {
       const result = await db.query(`SELECT * FROM assets`);
@@ -21,6 +29,20 @@ export const resolvers = {
     asset: async (_req, args) => {
       const result = await db.query(`SELECT * FROM assets WHERE id = '${args.id}'`);
       return result.rows[0];
+    },
+    assetByUserId: async (_req, args) => {
+      const result = await db.query(`SELECT * FROM assets WHERE assigned_to = '${args.assigned_to}' `);
+      // console.log('as : ',result.rows,result.rowCount);
+      return result.rows;
+    },
+    getNotifications: async () => {
+      const result = await db.query("SELECT * FROM notifications ORDER BY created_at DESC");
+      // console.log(result.rows);
+      return result.rows;
+    },
+    getNotificationsById: async (_req, args) => {
+      const result = await db.query(`SELECT * FROM notifications WHERE user_id = '${args.user_id}' ORDER BY created_at DESC`);
+      return result.rows;
     }
   },
   Mutation: {
@@ -34,13 +56,26 @@ export const resolvers = {
       const user = result.rows[0];
       if (!user) return "No User"
       if (!(await bcrypt.compare(args.password, user.password))) return "Invalid Password";
-      return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET_KEY || "your_secret_key", { expiresIn: "1h" });
+      const token = jwt.sign({ id: user.id, role: user.role, reset_password: user.reset_password }, process.env.JWT_SECRET_KEY || "your_secret_key", { expiresIn: "1h" });
+      if (user.reset_password) {
+        await db.query(`UPDATE users SET reset_password = FALSE WHERE id = '${user.id}' `);
+      }
+      return token;
+    },
+    changePassword: async (_req, args) => {
+      const hashedPassword = await bcrypt.hash(args.password, 10);
+      const result = await db.query(`UPDATE users SET password = '${hashedPassword}' WHERE id = '${args.id}' RETURNING *`);
+      // console.log("Change Password: ",result.rows[0]);
+      if (result.rowCount > 0) {
+        return 'Successfully Changed Password!';
+      }
+      return 'Failed to Change Password.';
     },
     updateUser: async (_req, args) => {
       const result = await db.query(`UPDATE users SET name = '${args.name}', email = '${args.email}', profile_pic = '${args.profile_pic}' , dob = '${args.dob}', gender = '${args.gender}', 
             blood_group = '${args.blood_group}', marital_status = '${args.marital_status}', phone = '${args.phone}', address = '${args.address}', designation = '${args.designation}',
             department = '${args.department}', city = '${args.city}', state = '${args.state}', pin_code = '${args.pin_code}', country = '${args.country}' WHERE id = '${args.id}' RETURNING *`)
-      console.log(result.rows[0]);
+      // console.log(result.rows[0]);
       return result.rows[0];
     },
     assignAsset: async (_req, args) => {
@@ -56,18 +91,101 @@ export const resolvers = {
         });
         return result.rows[0];
       }
-      catch(error){
+      catch (error) {
         console.error("Error in assignAsset:", error);
         throw new Error("Failed to assign asset.");
       }
     },
+    requestAsset: async (_req, args) => {
+      try {
+        const result = await db.query(`SELECT * FROM assets WHERE id = '${args.id}' `);
+        // console.log(result.rows[0]);
+        return 'Successfully requested asset!';
+      }
+      catch (error) {
+        throw new Error("Failed to request asset.");
+      }
+    },
     addAsset: async (_req, args) => {
-      try{
+      try {
         const result = await db.query(`INSERT INTO assets (type, serial_no, name, version, specifications, condition, assigned_status) VALUES ('${args.type}', '${args.serial_no}', '${args.name}', '${args.version}', '${args.specifications}', '${args.condition}', '${args.assigned_status}') RETURNING * `);
-        console.log(result.rows[0]);
+        // console.log(result.rows[0]);
         return 'Asset Added Successfully';
       }
-      catch(error){
+      catch (error) {
+        throw new Error(error);
+      }
+    },
+    addUser: async (_req, args) => {
+      try {
+        const alreadyExist = await db.query(`SELECT * FROM users WHERE email = '${args.email}' `)
+        // console.log("Received Data:", args.name, args.email, args.role);
+        if (alreadyExist.rowCount > 0) {
+          throw new Error('User is already exists.');
+        }
+        const temporaryPassword = 'Santhosh@123';
+        const hashedTempPassword = await bcrypt.hash(temporaryPassword, 10);
+        await sendEmail({
+          to: args.email,
+          subject: "Your Temporary Password",
+          html: `<p>Hi ${args.name},</p>
+                 <p>Your account has been created. Here is your temporary password: <strong>${temporaryPassword}</strong></p>
+                 <p>Please log in and change your password.</p>`,
+        });
+        const result = await db.query(`INSERT INTO users (name,email,password,role,created_at,updated_at) VALUES ('${args.name}', '${args.email}', '${hashedTempPassword}', '${args.role}', NOW(), NOW()) RETURNING *`);
+        // console.log(result.rows[0]);
+        return 'User added successfully!!!';
+      }
+      catch (error) {
+        throw new Error(error);
+      }
+    },
+    deleteUser: async (_req, args) => {
+      try {
+        const result = await db.query(`UPDATE users SET status = 'Inactive',deleted_at = NOW() WHERE id = '${args.id}' RETURNING *`);
+        // console.log('DELETE : ',result.rows[0]);
+        return 'User Deleted Successfully!';
+      }
+      catch (error) {
+        throw new Error(error);
+      }
+    },
+    deAssignAsset: async (_req, args) => {
+      try {
+        const result = await db.query(`UPDATE assets SET assigned_to = null, assigned_status = 'Available', assigned_date = null, updated_at = NOW(), return_date = NOW() WHERE id = '${args.id}' RETURNING *`);
+        // console.log(result.rows[0]);
+        return 'Asset De-Assigned Successfully!';
+      }
+      catch (error) {
+        throw new Error(error);
+      }
+    },
+    createNotification: async (_, { user_id, asset_id, message }) => {
+      const result = await db.query("INSERT INTO notifications (user_id, asset_id, message) VALUES ($1, $2, $3) RETURNING *", [user_id, asset_id, message]);
+      return result.rows[0];
+    },
+    readNotifications: async (_, { id, choice }) => {
+      try {
+        const result = await db.query(`SELECT * FROM notifications WHERE id = '${id}'`);
+        const asset = await db.query(`UPDATE assets SET assigned_to = '${result.rows[0].user_id}', assigned_status = 'Assigned', assigned_date =  NOW() WHERE id = '${result.rows[0].asset_id}' RETURNING *`);
+        const user = await db.query(`SELECT email FROM users WHERE id = '${asset.rows[0].assigned_to}'`);
+        if (choice) {
+          await sendEmail({
+            to: user.rows[0].email,
+            subject: 'Your Requested Asset Assigned Succesfully!!!',
+            text: `Asset ${asset.rows[0].type} - ${asset.rows[0].name} is assigned to you on ${asset.rows[0].assigned_date} as per your request`
+          });
+          await db.query(`UPDATE notifications set is_read = true WHERE id = '${id}'`);
+          return 'Successfully Approved!';
+        }
+        await sendEmail({
+          to: user.rows[0].email,
+          subject: 'Your Request for Asset!!!',
+          text: `Sorry, your requested asset is not assigned to you as per the process.Please, find any other asset or will get to you soon!`
+        });
+        await db.query(`UPDATE notifications set is_read = true WHERE id = '${id}'`);
+        return 'Succesfully Rejected!';
+      } catch (error) {
         throw new Error(error);
       }
     }
