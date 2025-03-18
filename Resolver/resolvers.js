@@ -24,6 +24,6 @@ export const resolvers = {
         deleteUser: async (_req, args) => userService.deleteUser(args.id),
         deAssignAsset: async (_req, args) => assetService.deAssignAsset(args.id),
         createNotification: async(_req,args) => notificationService.getCreateNotification(args.user_id, args.asset_id, args.message),
-        readNotifications: async (_req, args) => notificationService.getReadNotifications(args.id, args.choice)
+        readNotifications: async (_req, args) =>  notificationService.getReadNotifications(args.id, args.choice)
     }
 }
