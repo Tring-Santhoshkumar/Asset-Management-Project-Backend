@@ -3,7 +3,6 @@ import db from '../../db.js';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../Mail/mailer.js';
 
-
 export const userService = {
     getAllUsers: async () => {
         const result = await db.query("SELECT * FROM users");
