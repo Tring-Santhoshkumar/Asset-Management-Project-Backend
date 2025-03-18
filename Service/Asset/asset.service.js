@@ -4,7 +4,6 @@ import { sendEmail } from '../Mail/mailer.js';
 export const assetService = {
     getAllAssets: async () => {
         const result = await db.query("SELECT * FROM assets");
-        // console.log("All assets : ",result.rows);
         return result.rows;
     },
     getAssetById: async (id) => {
@@ -18,7 +17,6 @@ export const assetService = {
     assignAsset: async (id, assigned_to) => {
         const result = await db.query(`UPDATE assets SET assigned_to = '${assigned_to}', assigned_status = 'Assigned', assigned_date = NOW() WHERE id = '${id}' RETURNING *`);
         const user = await db.query(`SELECT email FROM users WHERE id = '${assigned_to}' `);
-        // console.log(user.rows[0].email);
         await sendEmail({
           to: user.rows[0].email,
           subject: "Asset Assigned!!!",
@@ -40,6 +38,6 @@ export const assetService = {
     deAssignAsset: async (id) => {
         const result = await db.query(`UPDATE assets SET assigned_to = null, assigned_status = 'Available', assigned_date = null, 
                         updated_at = NOW(), return_date = NOW() WHERE id = '${id}' RETURNING *`);
-        return "Asset De-Assigned Successfully!";
+        return result.rowCount > 0 ? "Asset De-Assigned Successfully!" : "Invalid asset de-assigning!";
     }
 }

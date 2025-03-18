@@ -50,7 +50,6 @@ export const userService = {
                    <p>Please log in and change your password.</p>`,
             });
             const result = await db.query(`INSERT INTO users (name, email, password, role, created_at, updated_at) VALUES ('${name}', '${email}', '${hashedTempPassword}', '${role}', NOW(), NOW()) RETURNING *`);
-            // console.log(result.rows[0]);
             return "User added successfully!";
         }
         catch (error) {

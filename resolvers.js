@@ -7,18 +7,10 @@ export const resolvers = {
     users: async () => {
       const result = await db.query("SELECT * FROM users");
       const users = result.rows;
-      // for (const user of users) {
-      //   const assetsResult = await pool.query("SELECT * FROM assets WHERE assigned_to = $1", [user.id]);
-      //   user.assigned_assets = assetsResult.rows;
-      // }
       return users;
     },
     user: async (_req, args) => {
       const result = await db.query(`SELECT * FROM users WHERE id = '${args.id}'`);
-      // console.log("User Data : ", result.rows[0]);
-      // const users = result.rows[0];
-      // const assetsResult = await pool.query("SELECT * FROM assets WHERE assigned_to = $1", [users.id]);
-      // users.assigned_assets = assetsResult.rows;
       return { ...result?.rows[0], dob: result.rows[0].dob ? result.rows[0].dob.toISOString().split("T")[0] : null };
     },
     allAssets: async () => {
