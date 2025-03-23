@@ -5,9 +5,19 @@ import { sendEmail } from './Service/Mail/mailer.js';
 export const resolvers = {
   Query: {
     users: async () => {
-      const result = await db.query("SELECT * FROM users");
-      const users = result.rows;
-      return users;
+      const result = await db.query("SELECT users.*, assets.id AS asset_id, assets.serial_no AS assetserial_no, assets.type AS assettype, assets.name AS assetname FROM users LEFT JOIN assets ON users.id = assets.assigned_to");
+      const resultMap = {};
+      result.rows.forEach(row => {
+        const { asset_id, assetserial_no, assettype, assetname, ...userData } = row;
+        if(!resultMap[row.id]){
+          resultMap[row.id] = { ...userData, assigned_assets: [] }
+        }
+        if(asset_id){  
+          resultMap[row.id].assigned_assets.push({ id: asset_id, serial_no: assetserial_no, type: assettype, name: assetname})
+        }
+      })
+      console.log("Processed Users: ", resultMap);
+      return Object.values(resultMap);
     },
     user: async (_req, args) => {
       const result = await db.query(`SELECT * FROM users WHERE id = '${args.id}'`);
