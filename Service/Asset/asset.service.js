@@ -1,5 +1,7 @@
 import db from '../../db.js';
 import { sendEmail } from '../Mail/mailer.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const assetService = {
     getAllAssets: async () => {
@@ -31,7 +33,7 @@ export const assetService = {
           <p>Please ensure proper usage and care of this asset.</p><hr />
           <p>Best regards,</p>
           <p><strong>Tringapps Research Labs Pvt Ltd</strong></p>
-          <p>Email: <a href="mailto:tringapps@mailinator.com">tringapps@mailinator.com</a></p></div>`
+          <p>Email: <a href="mailto:${process.env.ADMIN_EMAIL}">${process.env.ADMIN_EMAIL}</a></p></div>`
         });
         return result.rows[0];
     },
@@ -65,10 +67,11 @@ export const assetService = {
                 <hr />
                 <p>Best regards,</p>
                 <p><strong>Tringapps Research Labs Pvt Ltd</strong></p>
-                <p>Email: <a href="mailto:tringapps@mailinator.com">tringapps@mailinator.com</a></p></div>`
+                <p>Email: <a href="mailto:${process.env.ADMIN_EMAIL}">${process.env.ADMIN_EMAIL}</a></p>
+                </div>`
             })
         }
-        const res = await db.query(`UPDATE assets SET deleted_at = NOW(), assigned_to = NULL, assigned_status = NULL WHERE id ='${id}' RETURNING *`);4
+        const res = await db.query(`UPDATE assets SET deleted_at = NOW(), assigned_to = NULL, assigned_status = NULL WHERE id ='${id}' RETURNING *`);
         console.log("Datas",res.rows[0]);
         return 'Asset Deleted Successfully';
     },

@@ -3,6 +3,8 @@ import db from '../../db.js';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../Mail/mailer.js';
 import { generatePassword } from '../Password/generatePassword.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const userService = {
     getAllUsers: async () => {
@@ -49,12 +51,16 @@ export const userService = {
         try{
             const result = await db.query(`SELECT * FROM users WHERE email = '${email}'`);
             const user = result.rows[0];
-            if (!user) return "No User";
-            if (!(await bcrypt.compare(password, user.password))) return "Invalid Password";
-            if (user.status == 'Inactive') return "Inactive User";
+            // if (!user) return "No User";
+            // if (!(await bcrypt.compare(password, user.password))) return "Invalid Password";
+            // if (user.status == 'Inactive') return "Inactive User";
+            // console.log(user?.status === 'Inactive' ? "Inactive User" : (!user? "No User" : 'Invalid Password'));
+            if(user?.status === 'Inactive' || !user || !(await bcrypt.compare(password, user.password))){
+                return !user ? 'No User' : user.status === 'Inactive' ? "Inactive User" : 'Invalid Password';
+            }
             const token = jwt.sign({ id: user.id, role: user.role, reset_password: user.reset_password }, process.env.JWT_SECRET_KEY || "your_secret_key", { expiresIn: "1h" });
             if (user.reset_password) {
-                await db.query(`UPDATE users SET reset_password = FALSE WHERE id = '${user.id}' `);
+                await db.query(`UPDATE users SET reset_password = FALSE WHERE id = ${user.id} `);
             }
             return token;
         }
@@ -91,14 +97,14 @@ export const userService = {
                 <p><strong>Temporary Password:</strong> <i>${temporaryPassword}</i></p>
                 <p>For security reasons, we strongly recommend that you log in and update your password immediately.</p>
                 <h3>How to Log In:</h3>
-                <p>Go to our login page: <a href="http://localhost:3000/login" style="color: #0056b3;">Login</a></p>
+                <p>Go to our login page: <a href=${process.env.LOGIN_URL} style="color: #0056b3;">Login</a></p>
                 <p>Enter your email and the temporary password provided above.</p>
                 <p>Follow the on-screen instructions to set up a new password.</p>
                 <p>If you did not request this account, please contact our support team immediately.</p>
                 <hr />
                 <p>Best regards,</p>
                 <p><strong>Tringapps Research Labs Pvt Ltd</strong></p>
-                <p>Email: <a href="mailto:tringapps@mailinator.com">tringapps@mailinator.com</a></p>
+                <p>Email: <a href="mailto:${process.env.ADMIN_EMAIL}">${process.env.ADMIN_EMAIL}</a></p>
                 </div>`
             });
             const result = await db.query(`INSERT INTO users (name, email, password, role, created_at, updated_at) VALUES ('${name}', '${email}', '${hashedTempPassword}', '${role}', NOW(), NOW()) RETURNING *`);
@@ -138,7 +144,7 @@ export const userService = {
             <p>If you believe this was done in error or require further assistance, please contact our support team.</p><hr />
             <p>Best regards,</p>
             <p><strong>Tringapps Research Labs Pvt Ltd</strong></p>
-            <p>Email: <a href="mailto:tringapps@mailinator.com">tringapps@mailinator.com</a></p>
+            <p>Email: <a href="mailto:${process.env.ADMIN_EMAIL}">${process.env.ADMIN_EMAIL}</a></p>
             </div>`,
         });
         return result.rowCount > 0 ? "User Deleted Successfully!" : "Failed to Delete User.";

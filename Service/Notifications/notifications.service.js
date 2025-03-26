@@ -35,7 +35,7 @@ export const notificationService = {
                     <p>Please ensure proper handling of this asset as per company policies.</p><hr/>
                     <p>Best regards,</p>
                     <p><strong>Tringapps Research Labs Pvt Ltd</strong></p>
-                    <p>Email: <a href="mailto:tringapps@mailinator.com">tringapps@mailinator.com</a></p></div>`
+                    <p>Email: <a href="mailto:${process.env.ADMIN_EMAIL}">${process.env.ADMIN_EMAIL}</a></p></div>`
                 });
                 return 'Successfully Approved!';
             }
@@ -53,7 +53,7 @@ export const notificationService = {
                     <p>We appreciate your understanding.</p><hr/>
                     <p>Best regards,</p>
                     <p><strong>Tringapps Research Labs Pvt Ltd</strong></p>
-                    <p>Email: <a href="mailto:tringapps@mailinator.com">tringapps@mailinator.com</a></p></div>`
+                    <p>Email:<a href="mailto:${process.env.ADMIN_EMAIL}">${process.env.ADMIN_EMAIL}</a></p></div>`
                 });
                 return 'Succesfully Rejected!';
             }
