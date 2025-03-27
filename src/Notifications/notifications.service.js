@@ -1,5 +1,5 @@
-import db from '../../db.js';
-import { sendEmail } from '../Mail/mailer.js';
+import db from '../DBConfig/db.js';
+import { sendEmail } from '../utils/Mail/mailer.js';
 
 export const notificationService = {
     getAllNotifications: async () => {

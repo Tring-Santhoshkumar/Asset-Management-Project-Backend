@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
-import db from '../../db.js';
+import db from '../DBConfig/db.js';
 import jwt from 'jsonwebtoken';
-import { sendEmail } from '../Mail/mailer.js';
-import { generatePassword } from '../Password/generatePassword.js';
+import { sendEmail } from '../utils/Mail/mailer.js';
+import { generatePassword } from '../utils/Password/generatePassword.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
